@@ -33,6 +33,7 @@ class TranslationBaseModelAdmin(BaseModelAdmin):
         super(TranslationBaseModelAdmin, self).__init__(*args, **kwargs)
         self.trans_opts = translator.get_options_for_model(self.model)
         self._patch_prepopulated_fields()
+        self.request = None
 
     def _declared_fieldsets(self):
         # Take custom modelform fields option into account
@@ -45,8 +46,9 @@ class TranslationBaseModelAdmin(BaseModelAdmin):
         return None
     declared_fieldsets = property(_declared_fieldsets)
 
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        field = super(TranslationBaseModelAdmin, self).formfield_for_dbfield(db_field, **kwargs)
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        self.request = request
+        field = super(TranslationBaseModelAdmin, self).formfield_for_dbfield(db_field, request, **kwargs)
         self.patch_translation_field(db_field, field, **kwargs)
         return field
 
@@ -64,7 +66,7 @@ class TranslationBaseModelAdmin(BaseModelAdmin):
         except AttributeError:
             pass
         else:
-            orig_formfield = self.formfield_for_dbfield(orig_field, **kwargs)
+            orig_formfield = self.formfield_for_dbfield(orig_field, self.request, **kwargs)
             field.widget = deepcopy(orig_formfield.widget)
             if orig_field.name in self.both_empty_values_fields:
                 from modeltranslation.forms import NullableField, NullCharField
